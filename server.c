@@ -204,12 +204,14 @@ int run_server(int sfd) {
 					if(toBroadcast != NULL) {
 						// Send to all clients
 						head = all_clients.next;
-						printf("%s\n", toBroadcast);
+						printf("%s", toBroadcast);
 						while(head != NULL) {
-							addToWriteBuffer(toBroadcast, (my_socket*) head->data);
-							ev.events = EPOLLIN | EPOLLET | EPOLLRDHUP | EPOLLOUT;
-							ev.data.ptr = head->data;
-							epoll_ctl(epollfd, EPOLL_CTL_MOD, ((my_socket*)head->data)->fd, &ev);
+							if(head->data != events[n].data.ptr) {
+								addToWriteBuffer(toBroadcast, (my_socket*) head->data);
+								ev.events = EPOLLIN | EPOLLET | EPOLLRDHUP | EPOLLOUT;
+								ev.data.ptr = head->data;
+								epoll_ctl(epollfd, EPOLL_CTL_MOD, ((my_socket*)head->data)->fd, &ev);
+							}
 							head = head->next;
 						}
 						free(toBroadcast);
