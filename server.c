@@ -79,7 +79,7 @@ char* handle_client(my_socket *client) {
 			if(errno == EAGAIN || errno == EWOULDBLOCK)
 				break;
 		}
-		if(bytes_read + client->buf_index > client->buf_size) {
+		if(bytes_read + client->buf_index > client->buf_size-1) {
 			client->buf_size *= 2;
 			if((client->buf = realloc(client->buf, client->buf_size)) == NULL) {
 				mylog("realloc");	
@@ -89,17 +89,31 @@ char* handle_client(my_socket *client) {
 		memcpy(client->buf + client->buf_index, temp_buf, bytes_read);
 		client->buf_index += bytes_read;
 		client->buf[client->buf_index] = 0;
-		needle = strstr(client->buf, "\n");
-		if(needle != NULL) {
+		//printf("client->buf: %s\n", client->buf);
+		while((needle = strstr(client->buf, "\n")) != NULL) {
+			//printf("found newline %d in\n", needle-client->buf);
 			*needle = 0;
-			toReturn = malloc((needle+1 - client->buf)+1);
-			strcpy(toReturn, client->buf);
+			if(toReturn == NULL) {
+				toReturn = malloc((needle - client->buf)+2);
+				//printf("malloced: %d\n", ((needle-client->buf)+2));
+			}
+			else {
+				toReturn = realloc(toReturn, toReturnIndx + (needle - client->buf)+2);
+				//printf("realloced: %d\n", (toReturnIndx + (needle - client->buf)+2));
+			}
+			strcpy(toReturn + toReturnIndx, client->buf);
 			toReturnIndx = strlen(toReturn);
+			//printf("copied: %d\n", toReturnIndx);
 			toReturn[toReturnIndx] = '\n';
 			toReturn[toReturnIndx+1] = 0;
-			remaining = (needle+1-client->buf) - client->buf_index;
-			memmove(client->buf, needle+1, remaining);
+			toReturnIndx = strlen(toReturn);
+			remaining = (client->buf_index) - (needle+1 - client->buf); // +1 because of the newline we made 0
+			//printf("Remaining: %d from: %d\n", remaining, client->buf_index);
+			memmove(client->buf, needle+1, remaining); // +1 to skip the \n we made \0
 			client->buf_index = remaining;
+			client->buf[client->buf_index] = 0;
+			//if(remaining > 0)
+			//printf("Start Remaining\n%s\nEnd\n", client->buf);
 		}
 	}
 	return toReturn;
