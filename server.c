@@ -39,7 +39,7 @@ void mylog(char* error) {
 }
 
 int setnonblocking(int client) {
-	int flags, s;
+	int flags;
 	if((flags = fcntl(client, F_GETFL, 0)) == -1) {
 		mylog("fcntl");
 		return -1;
@@ -161,6 +161,10 @@ int run_server(int sfd) {
 	char* toBroadcast;
 	server.fd = sfd;
 	server.buf = NULL;
+	if (lr == -1) {
+		mylog("listen");
+		return EXIT_FAILURE;
+	}
 
 	epollfd = epoll_create1(0);
 	if (epollfd == -1) {
@@ -194,12 +198,12 @@ int run_server(int sfd) {
 				new_client->buf_size = INIT_SOCK_BUF_SIZE;
 				new_client->buf = malloc(sizeof(char)*new_client->buf_size);
 				new_client->buf_index = 0;
-				memset(new_client->buf, 0, sizeof(new_client->buf));
+				memset(new_client->buf, 0, new_client->buf_size);
 
 				new_client->write_size = INIT_SOCK_BUF_SIZE;
 				new_client->write_buf = malloc(sizeof(char)*new_client->write_size);
 				new_client->write_index = 0;
-				memset(new_client->write_buf, 0, sizeof(new_client->write_size));
+				memset(new_client->write_buf, 0, new_client->write_size);
 
 
 				new_client->nodeptr = create(new_client);
@@ -243,6 +247,7 @@ int run_server(int sfd) {
 			}
 		}
 	}
+	return 1;
 }
 
 int main(int argc, char* argv[]) {
