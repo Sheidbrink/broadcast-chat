@@ -10,7 +10,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <errno.h>
-#include "doublell.h"
+#include <scott/doublell.h>
 #define QUEUE_SIZE 10
 #define MAX_EVENTS 10
 #define INIT_SOCK_BUF_SIZE 512
@@ -57,7 +57,7 @@ void myclose(my_socket *client) {
 	close(client->fd);
 	free(client->buf);
 	free(client->write_buf);
-	delete(client->nodeptr);
+	dll_delete(client->nodeptr);
 	free(client);
 }
 
@@ -206,8 +206,8 @@ int run_server(int sfd) {
 				memset(new_client->write_buf, 0, new_client->write_size);
 
 
-				new_client->nodeptr = create(new_client);
-				add(&all_clients, new_client->nodeptr);
+				new_client->nodeptr = dll_create(new_client);
+				dll_add(&all_clients, new_client->nodeptr);
 				
 				ev.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
 				ev.data.ptr = new_client;

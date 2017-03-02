@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#include <scott/utils.h>
 
 #define DELETE_CHAR 0x7F
 #define ESCAPE_CHAR 27
@@ -14,25 +15,32 @@ pthread_mutex_t console_mut;
 int running;
 char* input_buf;
 int input_index = 0;
+size_t input_size;
 int sock;
 
 void* thread_recv(void *p) {
-	char buf[512];
-	ssize_t bytes_read;
+	char* chat_buf = NULL;
+	void* chat_bufv;
+	size_t chat_buf_size = 0;
 	ssize_t total_read;
+	char recv_buf[512];
+	ssize_t bytes_read;
+
 	while(running) {
 		total_read = 0;
 		do {
-			bytes_read = recv(sock, buf + total_read, 512, 0);
+			bytes_read = recv(sock, recv_buf, 512, 0);
 			if(bytes_read <= 0) {
 				running = 0;
 				break;
 			}
+			chat_bufv = &chat_buf;
+			chat_buf_size = copy_to_buffer(chat_bufv, chat_buf_size, total_read, recv_buf, bytes_read+1);
 			total_read += bytes_read;
-		} while(strstr(buf, "\n") == NULL);
-		buf[bytes_read] = 0;
+			chat_buf[total_read] = 0;
+		} while(strstr(chat_buf, "\n") == NULL);
 		pthread_mutex_lock(&console_mut);
-		printf("%c[2K\r%s", ESCAPE_CHAR, buf);
+		printf("%c[2K\r%s", ESCAPE_CHAR, chat_buf);
 		if(input_index > 0)
 			printf("%s", input_buf);
 		fflush(stdout);
@@ -86,6 +94,7 @@ int main(int argc, char* argv[]) {
 	newt.c_lflag &= ~(ICANON | ECHO);
 	tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 	input_buf = malloc(512);
+	input_size = 512;
 	running = 1;
 
 	pthread_t recver;
@@ -126,6 +135,10 @@ int main(int argc, char* argv[]) {
 				printf("%c", c);
 				fflush(stdout);
 				break;
+		}
+		if(input_index >= input_size) {
+			input_size *= 2;
+			input_buf = realloc(input_buf, input_size);
 		}
 		pthread_mutex_unlock(&console_mut);
 	}
