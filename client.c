@@ -41,6 +41,7 @@ void* thread_recv(void *p) {
 		} while(strstr(chat_buf, "\n") == NULL);
 		pthread_mutex_lock(&console_mut);
 		printf("%c[2K\r%s", ESCAPE_CHAR, chat_buf);
+		printf(">");
 		if(input_index > 0)
 			printf("%s", input_buf);
 		fflush(stdout);
@@ -104,6 +105,7 @@ int main(int argc, char* argv[]) {
 	int total_sent;
 	int bytes_sent;
 
+	printf(">");
 	while(running) {
 		c = getchar();
 		pthread_mutex_lock(&console_mut);
@@ -117,9 +119,9 @@ int main(int argc, char* argv[]) {
 				break;
 			case '\n':
 				input_buf[input_index++] = c;
-				printf("%c", c);
 				total_sent = 0;
 				input_buf[input_index] = 0;
+				printf("%c[2K\r%s>", ESCAPE_CHAR, input_buf);
 				while(total_sent < input_index) {
 					bytes_sent = send(sock, input_buf, input_index - total_sent,0);
 					total_sent += bytes_sent;
@@ -129,9 +131,11 @@ int main(int argc, char* argv[]) {
 					}
 				}
 				input_index = 0;
+				input_buf[input_index] = 0;
 				break;
 			default:
 				input_buf[input_index++] = c;
+				input_buf[input_index] = 0;
 				printf("%c", c);
 				fflush(stdout);
 				break;
